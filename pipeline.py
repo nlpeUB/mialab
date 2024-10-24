@@ -65,7 +65,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                           'registration_pre': True,
                           'coordinates_feature': True,
                           'intensity_feature': True,
-                          'gradient_intensity_feature': True}
+                          'gradient_intensity_feature': True,
+                          'sthnew': True}
 
     # load images for training and pre-process
     images = putil.pre_process_batch(crawler.data, pre_process_params, multi_process=False)
@@ -158,7 +159,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     # clear results such that the evaluator is ready for the next evaluation
     evaluator.clear()
 
-    log_metric_in_wab(forest, result_summary_file)
+    log_metric_in_wab(forest, result_summary_file, pre_process_params)
 
 
 if __name__ == "__main__":
