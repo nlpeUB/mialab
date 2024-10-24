@@ -236,3 +236,7 @@ xcuserdata/
 ### Project specific stuff
 *.nii.gz
 *.mha
+
+.idea/
+wandb/
+mia-result/

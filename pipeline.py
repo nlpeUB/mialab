@@ -15,6 +15,8 @@ import numpy as np
 import pymia.data.conversion as conversion
 import pymia.evaluation.writer as writer
 
+from wab_logging import log_metric_in_wab
+
 try:
     import mialab.data.structure as structure
     import mialab.utilities.file_access_utilities as futil
@@ -101,6 +103,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     pre_process_params['training'] = False
     images_test = putil.pre_process_batch(crawler.data, pre_process_params, multi_process=False)
 
+    data_test = np.concatenate([img.feature_matrix[0] for img in images_test])
+
     images_prediction = []
     images_probabilities = []
 
@@ -153,6 +157,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
 
     # clear results such that the evaluator is ready for the next evaluation
     evaluator.clear()
+
+    log_metric_in_wab(forest, result_summary_file)
 
 
 if __name__ == "__main__":
