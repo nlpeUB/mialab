@@ -4,11 +4,11 @@ import sys
 import numpy as np
 import pymia.filtering.filter as fltr
 import SimpleITK as sitk
-from skimage.feature import graycomatrix, graycoprops
-from mahotas.features import lbp
-from typing import Tuple
+from typing import Tuple, Dict, List
 from scipy.ndimage import sobel, laplace
 from skimage.feature import canny
+from radiomics import glcm
+from skimage.feature import graycomatrix, graycoprops
 
 
 class AtlasCoordinates(fltr.Filter):
@@ -255,14 +255,15 @@ class RandomizedTrainingMaskGenerator:
         return mask
 
 
-class TextureFeatureExtractor(fltr.Filter):
+class PyRadiomicsTextureFeatureExtractor(fltr.Filter):
     """Represents a feature extractor filter, which extracts texture features."""
 
-    def execute(self, image: sitk.Image, params: fltr.FilterParams = None) -> sitk.Image:
-        """Executes a texture feature extractor on an image.
+    def execute(self, image: sitk.Image, brain_mask: np.array, params: fltr.FilterParams = None) -> sitk.Image:
+        """Executes a texture feature extractor on an image with PyRadiomics library.
 
         Args:
             image (sitk.Image): The image.
+            brain_mask (np.array): The mask of the brain.
             params (fltr.FilterParams): The parameters (unused).
 
         Returns:
@@ -275,40 +276,90 @@ class TextureFeatureExtractor(fltr.Filter):
         if image.GetDimension() != 3:
             raise ValueError('image needs to be 3-D')
 
+        glcm_features = glcm.RadiomicsGLCM(image, brain_mask)
+        glcm_features.disableAllFeatures()
+
+        glcm_features_names = [
+            'Autocorrelation',
+            'Contrast',
+            'InverseVariance'
+        ]  # selected from glcm_features.getFeatureNames()
+
+        for name in glcm_features_names:
+            glcm_features.enableFeatureByName(name)
+
+        results = glcm_features.execute()
+
+        return results
+
+
+class TextureFeatureExtractor(fltr.Filter):
+    """Represents a feature extractor filter, which extracts texture features."""
+
+    def execute(self, image: sitk.Image, features: List[str], params: fltr.FilterParams = None) -> Dict:
+        """Executes a texture feature extractor on an image.
+        Args:
+            image (sitk.Image): The image.
+            features (List[str]): List of features to extract from patches with GLCM.
+            params (fltr.FilterParams): The parameters (unused).
+        Returns:
+            Dict[str: sitk.Image]: The dict with texture features in image format.
+        Raises:
+            ValueError: If image is not 3-D.
+        """
+
+        if image.GetDimension() != 3:
+            raise ValueError('image needs to be 3-D')
+
         img_arr = sitk.GetArrayFromImage(image)
+        glcm_features = self._compute_glcm_features_per_patch(img_arr, features)
 
-        contrast, dissimilarity, homogeneity, energy, lbp_features = self._calculate_texture_features(img_arr)
+        img_outs = {}
+        for feature in features:
+            glcm_feature = glcm_features[feature]
+            img_out = sitk.GetImageFromArray(glcm_feature)
+            img_out.CopyInformation(image)
+            img_outs[feature] = img_out
 
-        img_out = sitk.GetImageFromArray(contrast)
-        img_out.CopyInformation(image)
-
-        return img_out
+        return img_outs
 
     @staticmethod
-    def _calculate_texture_features(image: sitk.Image) -> Tuple:
-        glcm_features = []
-        levels = np.max(image)
+    # TODO: Adapt the patch size and distance
+    def _compute_glcm_features_per_patch(image_3d, features, patch_size=(10, 10), step=10, distance=3):
+        image_3d = image_3d / np.max(image_3d)
+        image_3d = (255 * image_3d).astype(int)
 
-        for slice_idx in range(image.shape[2]):
-            slice_2d = image[:, :, slice_idx]
-            glcm = graycomatrix(slice_2d, distances=[1], angles=[0], levels=levels)
-            contrast = graycoprops(glcm, 'contrast')[0, 0]
-            dissimilarity = graycoprops(glcm, 'dissimilarity')[0, 0]
-            homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]
-            energy = graycoprops(glcm, 'energy')[0, 0]
-            glcm_features.append([contrast, dissimilarity, homogeneity, energy])
-        contrast, dissimilarity, homogeneity, energy = np.mean(glcm_features, axis=0)
+        output_images = {}
+        for feature in features:
+            output_image = np.zeros_like(image_3d, dtype=float)
+            depth, height, width = image_3d.shape
 
-        lbp_features = lbp(image, radius=1, points=8, ignore_zeros=False)
+            for z in range(depth):
+                slice_2d = image_3d[z]
+                output_slice = np.zeros_like(slice_2d, dtype=float)
 
-        return contrast, dissimilarity, homogeneity, energy, lbp_features
+                for i in range(0, height, step):
+                    for j in range(0, width, step):
+                        if i + patch_size[0] <= height and j + patch_size[1] <= width:
+                            patch = slice_2d[i:i + patch_size[0], j:j + patch_size[1]]
+
+                            glcm = graycomatrix(patch, distances=[distance], angles=[0], levels=256, symmetric=True, normed=True)
+
+                            contrast = graycoprops(glcm, feature)[0, 0]
+
+                            output_slice[i:i + patch_size[0], j:j + patch_size[1]] = contrast
+
+                output_image[z] = output_slice
+            output_images[feature] = output_image
+
+        return output_images
 
 
 class EdgesFeatureExtractor(fltr.Filter):
     """Represents a feature extractor filter, which extracts edges."""
 
     def execute(self, image: sitk.Image, params: fltr.FilterParams = None) -> sitk.Image:
-        """Executes a edges extractor on an image.
+        """Executes an edges extractor on an image.
 
         Args:
             image (sitk.Image): The image.
@@ -326,6 +377,7 @@ class EdgesFeatureExtractor(fltr.Filter):
 
         img_arr = sitk.GetArrayFromImage(image)
 
+        # TODO: In case we really need it, we can turn on different edges detectors
         sobel_edges, _, _ = self._calculate_edge_features(img_arr)
         edges_features = sobel_edges
 
