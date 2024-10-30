@@ -6,6 +6,3 @@ Pillow~=10.0.1
 scikit-learn~=1.5.2
 SimpleITK~=2.1.1.2
 wandb~=0.18.5
-scikit-image~=0.21.0
-mahotas~=1.4.18
-scipy~=1.10.1

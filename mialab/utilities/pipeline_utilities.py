@@ -44,9 +44,6 @@ class FeatureImageTypes(enum.Enum):
     T1w_GRADIENT_INTENSITY = 3
     T2w_INTENSITY = 4
     T2w_GRADIENT_INTENSITY = 5
-    NEIGHBORHOOD = 6
-    TEXTURE = 7
-    EDGES = 8
 
 
 class FeatureExtractor:
@@ -63,9 +60,6 @@ class FeatureExtractor:
         self.coordinates_feature = kwargs.get('coordinates_feature', False)
         self.intensity_feature = kwargs.get('intensity_feature', False)
         self.gradient_intensity_feature = kwargs.get('gradient_intensity_feature', False)
-        self.neighborhood_features = kwargs.get('neighborhood_features', False)
-        self.texture_features = kwargs.get('texture_features', False)
-        self.edge_features = kwargs.get('edge_features', False)
 
     def execute(self) -> structure.BrainImage:
         """Extracts features from an image.
@@ -88,28 +82,6 @@ class FeatureExtractor:
             # compute gradient magnitude images
             self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
                 sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T1w])
-
-        # TODO: Understand how NeighborhoodFeatureExtractor is supposed to work
-        # if self.neighborhood_features:
-        #     neighborhood_features_extractor = fltr_feat.NeighborhoodFeatureExtractor(
-        #         kernel=(64, 64, 64),
-        #         neighborhood_radius=64
-        #     )
-        #     self.img.feature_images[FeatureImageTypes.NEIGHBORHOOD] = \
-        #         neighborhood_features_extractor.execute(
-        #             self.img.images[structure.BrainImageTypes.T1w])
-
-        # TODO: Fix the issue with timeout
-        # if self.texture_features:
-        #     texture_features_extractor = fltr_feat.TextureFeatureExtractor()
-        #     self.img.feature_images[FeatureImageTypes.TEXTURE] = \
-        #         texture_features_extractor.execute(self.img.images[structure.BrainImageTypes.T1w])
-
-        # TODO: Add separated features extractor for Sobel, Laplacian and Canny
-        if self.edge_features:
-            edge_features_extractor = fltr_feat.EdgesFeatureExtractor()
-            self.img.feature_images[FeatureImageTypes.EDGES] = \
-                edge_features_extractor.execute(self.img.images[structure.BrainImageTypes.T1w])
 
         self._generate_feature_matrix()
 
