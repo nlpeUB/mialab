@@ -344,10 +344,9 @@ class TextureFeatureExtractor(fltr.Filter):
                             patch = slice_2d[i:i + patch_size[0], j:j + patch_size[1]]
 
                             glcm = graycomatrix(patch, distances=[distance], angles=[0], levels=256, symmetric=True, normed=True)
+                            feature_from_glcm = graycoprops(glcm, feature)[0, 0]
 
-                            contrast = graycoprops(glcm, feature)[0, 0]
-
-                            output_slice[i:i + patch_size[0], j:j + patch_size[1]] = contrast
+                            output_slice[i:i + patch_size[0], j:j + patch_size[1]] = feature_from_glcm
 
                 output_image[z] = output_slice
             output_images[feature] = output_image

@@ -206,10 +206,10 @@ if __name__ == "__main__":
         'coordinates_feature': True,
         'intensity_feature': True,
         'gradient_intensity_feature': True,
-        'neighborhood_features': False,
+        'neighborhood_features': True,
         'texture_contrast_feature': True,
-        'texture_dissimilarity_feature': False,
-        'texture_correlation_feature': False,
+        'texture_dissimilarity_feature': True,
+        'texture_correlation_feature': True,
         'edge_feature': True
     }
 

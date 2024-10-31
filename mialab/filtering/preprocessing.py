@@ -5,6 +5,8 @@ Image pre-processing aims to improve the image quality (image intensities) for s
 import warnings
 
 import pymia.filtering.filter as pymia_fltr
+import pymia.filtering.registration as fltr_reg
+
 import SimpleITK as sitk
 
 
