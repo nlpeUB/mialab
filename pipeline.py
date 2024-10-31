@@ -71,8 +71,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     pre_process_and_feature_extraction_params = {**pre_process_params, **feature_extraction_params}
 
     # load images for training and pre-process
-    # TODO: Remove the limit on the index!!!
-    images = putil.pre_process_batch(crawler.data, pre_process_and_feature_extraction_params, multi_process=False)[:3] # for testing only!
+    images = putil.pre_process_batch(crawler.data, pre_process_and_feature_extraction_params, multi_process=False)
 
     # generate feature matrix and label vector
     data_train = np.concatenate([img.feature_matrix[0] for img in images])
@@ -105,8 +104,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
 
     # load images for testing and pre-process
     pre_process_and_feature_extraction_params['training'] = False
-    # TODO: Remove the limit on the index!!!
-    images_test = putil.pre_process_batch(crawler.data, pre_process_and_feature_extraction_params, multi_process=False)[:3] # for testing only!
+    images_test = putil.pre_process_batch(crawler.data, pre_process_and_feature_extraction_params, multi_process=False)
 
     images_prediction = []
     images_probabilities = []
