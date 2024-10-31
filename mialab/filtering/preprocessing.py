@@ -5,6 +5,7 @@ Image pre-processing aims to improve the image quality (image intensities) for s
 import warnings
 
 import pymia.filtering.filter as pymia_fltr
+import pymia.filtering.registration as fltr_reg
 import SimpleITK as sitk
 
 
@@ -125,11 +126,6 @@ class ImageRegistration(pymia_fltr.Filter):
         Returns:
             sitk.Image: The registered image.
         """
-
-        # todo: replace this filter by a registration. Registration can be costly, therefore, we provide you the
-        # transformation, which you only need to apply to the image!
-        warnings.warn('No registration implemented. Returning unregistered image')
-
         atlas = params.atlas
         transform = params.transformation
         is_ground_truth = params.is_ground_truth  # the ground truth will be handled slightly different
@@ -137,8 +133,23 @@ class ImageRegistration(pymia_fltr.Filter):
         # note: if you are interested in registration, and want to test it, have a look at
         # pymia.filtering.registration.MultiModalRegistration. Think about the type of registration, i.e.
         # do you want to register to an atlas or inter-subject? Or just ask us, we can guide you ;-)
+        registration = fltr_reg.MultiModalRegistration()
+        registration_params = fltr_reg.MultiModalRegistrationParams(atlas)
 
-        return image
+        if is_ground_truth:
+            registered_image = sitk.Resample(
+                image1=image,
+                referenceImage=atlas,
+                transform=transform,
+                interpolator=sitk.sitkNearestNeighbor
+            )
+        else:
+            registered_image = registration.execute(
+                image=image,
+                params=registration_params
+            )
+
+        return registered_image
 
     def __str__(self):
         """Gets a printable string representation.
