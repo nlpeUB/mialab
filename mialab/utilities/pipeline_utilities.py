@@ -291,7 +291,11 @@ def init_evaluator() -> eval_.Evaluator:
     # initialize metrics
     metrics = [metric.DiceCoefficient()]
     # todo: add hausdorff distance, 95th percentile (see metric.HausdorffDistance)
-    warnings.warn('Initialized evaluation with the Dice coefficient. Do you know other suitable metrics?')
+    try:
+        hausdorff_metric = metric.HausdorffDistance(percentile=95)
+        metrics.append(hausdorff_metric)
+    except AttributeError:
+        warnings.warn('Initialized evaluation with the Dice coefficient. Do you know other suitable metrics?')
 
     # define the labels to evaluate
     labels = {1: 'WhiteMatter',
