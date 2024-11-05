@@ -246,7 +246,6 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
     img = structure.BrainImage(id_, path, img, transform)
 
     # construct pipeline for brain mask registration
-    # we need to perform this before the T1w and T2w pipeline because the registered mask is used for skull-stripping
     pipeline_brain_mask = fltr.FilterPipeline()
     if kwargs.get('registration_pre', False):
         pipeline_brain_mask.add_filter(fltr_prep.ImageRegistration())
