@@ -1,8 +1,10 @@
 import wandb
 import pandas as pd
 
+from plot_results import plot_results
 
-def log_metric_in_wab(model, result_summary_file, feature_extraction_params):
+
+def log_metric_in_wab(model, result_summary_file, pre_process_params, subfolder_path):
     wandb.init(project="mialab", config=model.get_params())
 
     results_df = pd.read_csv(result_summary_file, sep=";")
@@ -15,7 +17,10 @@ def log_metric_in_wab(model, result_summary_file, feature_extraction_params):
     for metric in dice_dict.keys():
         wandb.summary[metric] = dice_dict[metric]
 
-    for param in feature_extraction_params.keys():
-        wandb.summary[param] = feature_extraction_params[param]
+    for param in pre_process_params.keys():
+        wandb.summary[param] = pre_process_params[param]
+
+    results_fig = plot_results(subfolder_path, return_fig=True)
+    wandb.log({"DICE score": wandb.Image(results_fig)})
 
     wandb.finish()

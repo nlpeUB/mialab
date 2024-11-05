@@ -17,7 +17,7 @@ import pymia.evaluation.writer as writer
 
 from typing import Dict
 
-from wab_logging import log_metric_in_wab
+from wnb_logging import log_metric_in_wab
 
 try:
     import mialab.data.structure as structure
@@ -37,7 +37,8 @@ LOADING_KEYS = [structure.BrainImageTypes.T1w,
                 structure.BrainImageTypes.RegistrationTransform]  # the list of data we will load
 
 
-def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str, feature_extraction_params: Dict):
+def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str,
+         feature_extraction_params: Dict):
     """Brain tissue segmentation using decision forests.
 
     The main routine executes the medical image analysis pipeline:
@@ -62,6 +63,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                                           LOADING_KEYS,
                                           futil.BrainImageFilePathGenerator(),
                                           futil.DataDirectoryFilter())
+
     pre_process_params = {
         'skullstrip_pre': True,
         'normalization_pre': True,
@@ -162,7 +164,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     # clear results such that the evaluator is ready for the next evaluation
     evaluator.clear()
 
-    log_metric_in_wab(forest, result_summary_file, feature_extraction_params)
+    log_metric_in_wab(forest, result_summary_file, pre_process_params, result_dir)
 
 
 if __name__ == "__main__":
