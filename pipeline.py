@@ -15,7 +15,7 @@ import numpy as np
 import pymia.data.conversion as conversion
 import pymia.evaluation.writer as writer
 
-from wab_logging import log_metric_in_wab
+from wnb_logging import log_metric_in_wab
 
 try:
     import mialab.data.structure as structure
@@ -61,8 +61,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                                           futil.BrainImageFilePathGenerator(),
                                           futil.DataDirectoryFilter())
     pre_process_params = {'skullstrip_pre': True,
-                          'normalization_pre': True,
-                          'registration_pre': True,
+                          'normalization_pre': False,
+                          'registration_pre': False,
                           'coordinates_feature': True,
                           'intensity_feature': True,
                           'gradient_intensity_feature': True,
@@ -159,7 +159,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     # clear results such that the evaluator is ready for the next evaluation
     evaluator.clear()
 
-    log_metric_in_wab(forest, result_summary_file, pre_process_params)
+    log_metric_in_wab(forest, result_summary_file, pre_process_params, result_dir)
 
 
 if __name__ == "__main__":
