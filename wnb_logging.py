@@ -21,6 +21,6 @@ def log_metric_in_wab(model, result_summary_file, pre_process_params, subfolder_
         wandb.summary[param] = pre_process_params[param]
 
     results_fig = plot_results(subfolder_path, return_fig=True)
-    wandb.log({"plot": wandb.Image(results_fig)})
+    wandb.log({"DICE score": wandb.Image(results_fig)})
 
     wandb.finish()

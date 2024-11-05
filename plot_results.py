@@ -28,7 +28,7 @@ def plot_results(subfolder_path: str, return_fig: bool = False):
         plt.boxplot(label_data, labels=labels)
         plt.xlabel('Labels')
         plt.ylabel('Dice Coefficients')
-        plt.title(f'Boxplot of Dice Coefficients per Label for {subfolder}')
+        plt.title(f'Boxplot of Dice Coefficients per Label for {subfolder_path}')
 
         if return_fig:
             return fig
