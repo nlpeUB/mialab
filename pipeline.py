@@ -164,7 +164,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     # clear results such that the evaluator is ready for the next evaluation
     evaluator.clear()
 
-    log_metric_in_wab(forest, result_summary_file, pre_process_params, result_dir)
+    log_metric_in_wab(forest, result_summary_file, pre_process_and_feature_extraction_params, result_dir)
 
 
 if __name__ == "__main__":
@@ -203,6 +203,7 @@ if __name__ == "__main__":
     )
 
     feature_extraction_params = {
+        't2_features': True,
         'coordinates_feature': True,
         'intensity_feature': True,
         'gradient_intensity_feature': True,
