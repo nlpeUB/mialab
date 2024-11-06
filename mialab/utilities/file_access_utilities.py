@@ -181,7 +181,8 @@ class FileSystemDataCrawler:
                  file_keys: list,
                  file_path_generator: FilePathGenerator,
                  dir_filter: DirectoryFilter = None,
-                 file_extension: str = '.nii.gz'):
+                 file_extension: str = '.nii.gz',
+                 load_pre: bool = False):
         """Initializes a new instance of the FileSystemDataCrawler class.
 
         Args:
@@ -192,6 +193,7 @@ class FileSystemDataCrawler:
                 data identifier to an data file path.
             dir_filter (DirectoryFilter): A directory filter, which filters a list of directories.
             file_extension (str): The data file extension (with or without dot).
+            load_pre (bool): Load preprocessed images.
         """
         super().__init__()
 
@@ -200,6 +202,7 @@ class FileSystemDataCrawler:
         self.file_keys = file_keys
         self.file_path_generator = file_path_generator
         self.file_extension = file_extension if file_extension.startswith('.') else '.' + file_extension
+        self.load_pre = load_pre
 
         # dict with key=id (i.e, directory name), value=path to data directory
         self.data = {}  # dict with key=id (i.e, directory name), value=dict with key=file_keys and value=path to file
@@ -214,6 +217,11 @@ class FileSystemDataCrawler:
             data_dict = {id_: path}  # init dict with id_ pointing to path
             for item in self.file_keys:
                 file_path = self.file_path_generator.get_full_file_path(id_, path, item, self.file_extension)
+
+                if self.load_pre and item != structure.BrainImageTypes.RegistrationTransform:
+                    pre_name = f"pre_{os.path.basename(file_path)}"
+                    file_path = os.path.join(path, pre_name)
+
                 data_dict[item] = file_path
 
             self.data[id_] = data_dict

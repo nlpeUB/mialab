@@ -65,10 +65,16 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                                           futil.DataDirectoryFilter())
 
     pre_process_params = {
-        'skullstrip_pre': True,
-        'normalization_pre': True,
-        'registration_pre': True
+        'load_pre': True,
+        'skullstrip_pre': False,
+        'normalization_pre': False,
+        'registration_pre': False,
+        'save_pre': False
     }
+
+    if pre_process_params['load_pre'] and sum(pre_process_params.values()) > 1:
+        print(f"If `load_pre` == True, all the rest of pre_process_params should be False!")
+        return
 
     pre_process_and_feature_extraction_params = {**pre_process_params, **feature_extraction_params}
 
@@ -203,15 +209,14 @@ if __name__ == "__main__":
     )
 
     feature_extraction_params = {
-        't2_features': True,
-        'coordinates_feature': True,
+        'coordinates_feature': False,
         'intensity_feature': True,
-        'gradient_intensity_feature': True,
-        'neighborhood_features': True,
-        'texture_contrast_feature': True,
-        'texture_dissimilarity_feature': True,
-        'texture_correlation_feature': True,
-        'edge_feature': True
+        'gradient_intensity_feature': False,
+        't2_features': False,
+        'texture_contrast_feature': False,
+        'texture_dissimilarity_feature': False,
+        'texture_correlation_feature': False,
+        'edge_feature': False
     }
 
     args = parser.parse_args()
