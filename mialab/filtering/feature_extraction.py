@@ -4,6 +4,11 @@ import sys
 import numpy as np
 import pymia.filtering.filter as fltr
 import SimpleITK as sitk
+from typing import Tuple, Dict, List
+from scipy.ndimage import sobel, laplace
+from skimage.feature import canny
+from radiomics import glcm
+from skimage.feature import graycomatrix, graycoprops
 
 
 class AtlasCoordinates(fltr.Filter):
@@ -105,10 +110,10 @@ def first_order_texture_features_function(values):
                      np.var(values),  # variance
                      std,
                      np.sqrt(num_values * (num_values - 1)) / (num_values - 2) * np.sum((values - mean) ** 3) /
-                     (num_values*std**3 + eps),  # adjusted Fisher-Pearson coefficient of skewness
+                     (num_values * std ** 3 + eps),  # adjusted Fisher-Pearson coefficient of skewness
                      np.sum((values - mean) ** 4) / (num_values * std ** 4 + eps),  # kurtosis
                      np.sum(-p * np.log2(p)),  # entropy
-                     np.sum(p**2),  # energy (intensity histogram uniformity)
+                     np.sum(p ** 2),  # energy (intensity histogram uniformity)
                      snr,
                      min_,
                      max_,
@@ -124,10 +129,10 @@ def first_order_texture_features_function(values):
 class NeighborhoodFeatureExtractor(fltr.Filter):
     """Represents a feature extractor filter, which works on a neighborhood."""
 
-    def __init__(self, kernel=(3, 3, 3), function_=first_order_texture_features_function):
+    def __init__(self, kernel=(3, 3, 3), function_=first_order_texture_features_function, neighborhood_radius: int = 3):
         """Initializes a new instance of the NeighborhoodFeatureExtractor class."""
         super().__init__()
-        self.neighborhood_radius = 3
+        self.neighborhood_radius = neighborhood_radius
         self.kernel = kernel
         self.function = function_
 
@@ -171,10 +176,9 @@ class NeighborhoodFeatureExtractor(fltr.Filter):
         pad = ((0, z_offset), (0, y_offset), (0, x_offset))
         img_arr_padded = np.pad(img_arr, pad, 'symmetric')
 
-        for xx in range(x):
-            for yy in range(y):
-                for zz in range(z):
-
+        for xx in range(0, x, self.neighborhood_radius):
+            for yy in range(0, y, self.neighborhood_radius):
+                for zz in range(0, z, self.neighborhood_radius):
                     val = self.function(img_arr_padded[zz:zz + z_offset, yy:yy + y_offset, xx:xx + x_offset])
                     img_out_arr[zz, yy, xx] = val
 
@@ -249,3 +253,148 @@ class RandomizedTrainingMaskGenerator:
         mask.SetSpacing(ground_truth.GetSpacing())
 
         return mask
+
+
+class PyRadiomicsTextureFeatureExtractor(fltr.Filter):
+    """Represents a feature extractor filter, which extracts texture features."""
+
+    def execute(self, image: sitk.Image, brain_mask: np.array, params: fltr.FilterParams = None) -> sitk.Image:
+        """Executes a texture feature extractor on an image with PyRadiomics library.
+
+        Args:
+            image (sitk.Image): The image.
+            brain_mask (np.array): The mask of the brain.
+            params (fltr.FilterParams): The parameters (unused).
+
+        Returns:
+            sitk.Image: The texture features in image format.
+
+        Raises:
+            ValueError: If image is not 3-D.
+        """
+
+        if image.GetDimension() != 3:
+            raise ValueError('image needs to be 3-D')
+
+        glcm_features = glcm.RadiomicsGLCM(image, brain_mask)
+        glcm_features.disableAllFeatures()
+
+        glcm_features_names = [
+            'Autocorrelation',
+            'Contrast',
+            'InverseVariance'
+        ]  # selected from glcm_features.getFeatureNames()
+
+        for name in glcm_features_names:
+            glcm_features.enableFeatureByName(name)
+
+        results = glcm_features.execute()
+
+        return results
+
+
+class TextureFeatureExtractor(fltr.Filter):
+    """Represents a feature extractor filter, which extracts texture features."""
+
+    def execute(self, image: sitk.Image, features: List[str], params: fltr.FilterParams = None) -> Dict:
+        """Executes a texture feature extractor on an image.
+        Args:
+            image (sitk.Image): The image.
+            features (List[str]): List of features to extract from patches with GLCM.
+            params (fltr.FilterParams): The parameters (unused).
+        Returns:
+            Dict[str: sitk.Image]: The dict with texture features in image format.
+        Raises:
+            ValueError: If image is not 3-D.
+        """
+
+        if image.GetDimension() != 3:
+            raise ValueError('image needs to be 3-D')
+
+        img_arr = sitk.GetArrayFromImage(image)
+        glcm_features = self._compute_glcm_features_per_patch(img_arr, features)
+
+        img_outs = {}
+        for feature in features:
+            glcm_feature = glcm_features[feature]
+            img_out = sitk.GetImageFromArray(glcm_feature)
+            img_out.CopyInformation(image)
+            img_outs[feature] = img_out
+
+        return img_outs
+
+    @staticmethod
+    # TODO: Adapt the patch size and distance
+    def _compute_glcm_features_per_patch(image_3d, features, patch_size=(10, 10), step=10, distance=3):
+        image_3d = image_3d / np.max(image_3d)
+        image_3d = (255 * image_3d).astype(int)
+
+        output_images = {}
+        for feature in features:
+            output_image = np.zeros_like(image_3d, dtype=float)
+            depth, height, width = image_3d.shape
+
+            for z in range(depth):
+                slice_2d = image_3d[z]
+                output_slice = np.zeros_like(slice_2d, dtype=float)
+
+                for i in range(0, height, step):
+                    for j in range(0, width, step):
+                        if i + patch_size[0] <= height and j + patch_size[1] <= width:
+                            patch = slice_2d[i:i + patch_size[0], j:j + patch_size[1]]
+
+                            glcm = graycomatrix(patch, distances=[distance], angles=[0], levels=256, symmetric=True, normed=True)
+                            feature_from_glcm = graycoprops(glcm, feature)[0, 0]
+
+                            output_slice[i:i + patch_size[0], j:j + patch_size[1]] = feature_from_glcm
+
+                output_image[z] = output_slice
+            output_images[feature] = output_image
+
+        return output_images
+
+
+class EdgesFeatureExtractor(fltr.Filter):
+    """Represents a feature extractor filter, which extracts edges."""
+
+    def execute(self, image: sitk.Image, params: fltr.FilterParams = None) -> sitk.Image:
+        """Executes an edges extractor on an image.
+
+        Args:
+            image (sitk.Image): The image.
+            params (fltr.FilterParams): The parameters (unused).
+
+        Returns:
+            sitk.Image: The edges features in image format.
+
+        Raises:
+            ValueError: If image is not 3-D.
+        """
+
+        if image.GetDimension() != 3:
+            raise ValueError('image needs to be 3-D')
+
+        img_arr = sitk.GetArrayFromImage(image)
+
+        # TODO: In case we really need it, we can turn on different edges detectors
+        sobel_edges, _, _ = self._calculate_edge_features(img_arr)
+        edges_features = sobel_edges
+
+        img_out = sitk.GetImageFromArray(edges_features)
+        img_out.CopyInformation(image)
+
+        return img_out
+
+    @staticmethod
+    def _calculate_edge_features(image: sitk.Image) -> Tuple:
+        sobel_edges = np.sqrt(sobel(image, axis=0) ** 2 + sobel(image, axis=1) ** 2 + sobel(image, axis=2) ** 2)
+        laplacian_edges = laplace(image)
+
+        canny_edges = []
+        for slice_idx in range(image.shape[2]):
+            slice_2d = image[:, :, slice_idx]
+            edges = canny(slice_2d)
+            canny_edges.append(edges)
+        canny_edges = np.stack(canny_edges, axis=2)
+
+        return sobel_edges, laplacian_edges, canny_edges

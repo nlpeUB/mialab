@@ -44,6 +44,14 @@ class FeatureImageTypes(enum.Enum):
     T1w_GRADIENT_INTENSITY = 3
     T2w_INTENSITY = 4
     T2w_GRADIENT_INTENSITY = 5
+    T1w_TEXTURE_CONTRAST = 6
+    T2w_TEXTURE_CONTRAST = 7
+    T1w_TEXTURE_DISSIMILARITY = 8
+    T2w_TEXTURE_DISSIMILARITY = 9
+    T1w_TEXTURE_CORRELATION = 10
+    T2w_TEXTURE_CORRELATION = 11
+    T1w_EDGES = 12
+    T2w_EDGES = 13
 
 
 class FeatureExtractor:
@@ -57,9 +65,14 @@ class FeatureExtractor:
         """
         self.img = img
         self.training = kwargs.get('training', True)
+        self.t2_features = kwargs.get('t2_features', False)
         self.coordinates_feature = kwargs.get('coordinates_feature', False)
         self.intensity_feature = kwargs.get('intensity_feature', False)
         self.gradient_intensity_feature = kwargs.get('gradient_intensity_feature', False)
+        self.texture_contrast_feature = kwargs.get('texture_contrast_feature', False)
+        self.texture_dissimilarity_feature = kwargs.get('texture_dissimilarity_feature', False)
+        self.texture_correlation_feature = kwargs.get('texture_correlation_feature', False)
+        self.edge_feature = kwargs.get('edge_feature', False)
 
     def execute(self) -> structure.BrainImage:
         """Extracts features from an image.
@@ -67,9 +80,6 @@ class FeatureExtractor:
         Returns:
             structure.BrainImage: The image with extracted features.
         """
-        # todo: add T2w features
-        warnings.warn('No features from T2-weighted image extracted.')
-
         if self.coordinates_feature:
             atlas_coordinates = fltr_feat.AtlasCoordinates()
             self.img.feature_images[FeatureImageTypes.ATLAS_COORD] = \
@@ -77,11 +87,61 @@ class FeatureExtractor:
 
         if self.intensity_feature:
             self.img.feature_images[FeatureImageTypes.T1w_INTENSITY] = self.img.images[structure.BrainImageTypes.T1w]
+            if self.t2_features:
+                self.img.feature_images[FeatureImageTypes.T2w_INTENSITY] = self.img.images[structure.BrainImageTypes.T2w]
 
         if self.gradient_intensity_feature:
-            # compute gradient magnitude images
             self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
                 sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T1w])
+            if self.t2_features:
+                self.img.feature_images[FeatureImageTypes.T2w_GRADIENT_INTENSITY] = \
+                    sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T2w])
+
+        texture_features = []
+        if self.texture_contrast_feature:
+            texture_features.append("contrast")
+
+        if self.texture_dissimilarity_feature:
+            texture_features.append("dissimilarity")
+
+        if self.texture_correlation_feature:
+            texture_features.append("correlation")
+
+        if len(texture_features):
+            texture_features_extractor = fltr_feat.TextureFeatureExtractor()
+            texture_features_images_t1 = texture_features_extractor.execute(
+                self.img.images[structure.BrainImageTypes.T1w],
+                texture_features
+            )
+            if self.t2_features:
+                texture_features_images_t2 = texture_features_extractor.execute(
+                    self.img.images[structure.BrainImageTypes.T2w],
+                    texture_features
+                )
+
+            if self.texture_contrast_feature:
+                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_CONTRAST] = texture_features_images_t1["contrast"]
+
+                if self.t2_features:
+                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_CONTRAST] = texture_features_images_t2["contrast"]
+
+            if self.texture_dissimilarity_feature:
+                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_DISSIMILARITY] = texture_features_images_t1["dissimilarity"]
+                if self.t2_features:
+                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_DISSIMILARITY] = texture_features_images_t2["dissimilarity"]
+
+            if self.texture_correlation_feature:
+                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_CORRELATION] = texture_features_images_t1["correlation"]
+                if self.t2_features:
+                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_CORRELATION] = texture_features_images_t2["correlation"]
+
+        if self.edge_feature:
+            edge_features_extractor = fltr_feat.EdgesFeatureExtractor()
+            self.img.feature_images[FeatureImageTypes.T1w_EDGES] = \
+                edge_features_extractor.execute(self.img.images[structure.BrainImageTypes.T1w])
+            if self.t2_features:
+                self.img.feature_images[FeatureImageTypes.T2w_EDGES] = \
+                    edge_features_extractor.execute(self.img.images[structure.BrainImageTypes.T2w])
 
         self._generate_feature_matrix()
 

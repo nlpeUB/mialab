@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 import pymia.filtering.filter as pymia_fltr
 import pymia.filtering.registration as fltr_reg
+
 import SimpleITK as sitk
 
 

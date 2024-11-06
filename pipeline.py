@@ -15,6 +15,8 @@ import numpy as np
 import pymia.data.conversion as conversion
 import pymia.evaluation.writer as writer
 
+from typing import Dict
+
 from wnb_logging import log_metric_in_wab
 
 try:
@@ -35,7 +37,8 @@ LOADING_KEYS = [structure.BrainImageTypes.T1w,
                 structure.BrainImageTypes.RegistrationTransform]  # the list of data we will load
 
 
-def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str):
+def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str,
+         feature_extraction_params: Dict):
     """Brain tissue segmentation using decision forests.
 
     The main routine executes the medical image analysis pipeline:
@@ -60,16 +63,17 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                                           LOADING_KEYS,
                                           futil.BrainImageFilePathGenerator(),
                                           futil.DataDirectoryFilter())
-    pre_process_params = {'skullstrip_pre': True,
-                          'normalization_pre': False,
-                          'registration_pre': False,
-                          'coordinates_feature': True,
-                          'intensity_feature': True,
-                          'gradient_intensity_feature': True,
-                          'sthnew': True}
+
+    pre_process_params = {
+        'skullstrip_pre': True,
+        'normalization_pre': True,
+        'registration_pre': True
+    }
+
+    pre_process_and_feature_extraction_params = {**pre_process_params, **feature_extraction_params}
 
     # load images for training and pre-process
-    images = putil.pre_process_batch(crawler.data, pre_process_params, multi_process=False)
+    images = putil.pre_process_batch(crawler.data, pre_process_and_feature_extraction_params, multi_process=False)
 
     # generate feature matrix and label vector
     data_train = np.concatenate([img.feature_matrix[0] for img in images])
@@ -101,10 +105,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                                           futil.DataDirectoryFilter())
 
     # load images for testing and pre-process
-    pre_process_params['training'] = False
-    images_test = putil.pre_process_batch(crawler.data, pre_process_params, multi_process=False)
-
-    data_test = np.concatenate([img.feature_matrix[0] for img in images_test])
+    pre_process_and_feature_extraction_params['training'] = False
+    images_test = putil.pre_process_batch(crawler.data, pre_process_and_feature_extraction_params, multi_process=False)
 
     images_prediction = []
     images_probabilities = []
@@ -113,7 +115,10 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
         print('-' * 10, 'Testing', img.id_)
 
         start_time = timeit.default_timer()
-        predictions = forest.predict(img.feature_matrix[0])
+        try:
+            predictions = forest.predict(img.feature_matrix[0])
+        except ValueError:
+            print()
         probabilities = forest.predict_proba(img.feature_matrix[0])
         print(' Time elapsed:', timeit.default_timer() - start_time, 's')
 
@@ -159,7 +164,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     # clear results such that the evaluator is ready for the next evaluation
     evaluator.clear()
 
-    log_metric_in_wab(forest, result_summary_file, pre_process_params, result_dir)
+    log_metric_in_wab(forest, result_summary_file, pre_process_and_feature_extraction_params, result_dir)
 
 
 if __name__ == "__main__":
@@ -197,5 +202,17 @@ if __name__ == "__main__":
         help='Directory with testing data.'
     )
 
+    feature_extraction_params = {
+        't2_features': True,
+        'coordinates_feature': True,
+        'intensity_feature': True,
+        'gradient_intensity_feature': True,
+        'neighborhood_features': True,
+        'texture_contrast_feature': True,
+        'texture_dissimilarity_feature': True,
+        'texture_correlation_feature': True,
+        'edge_feature': True
+    }
+
     args = parser.parse_args()
-    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir)
+    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir, feature_extraction_params)
