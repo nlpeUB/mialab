@@ -8,14 +8,20 @@ def run_pipeline():
     data_train_dir = '../data/train/'
     data_test_dir = '../data/test/'
 
-    feature_extraction_params = {
-        'coordinates_feature': False,
-        'intensity_feature': False,
-        'gradient_intensity_feature': False,
-        'neighborhood_features': False,
-        'texture_features': False,
-        'edge_features': False
+    fixed_feature_extraction_params = {
+        'coordinates_feature': True,
+        'texture_contrast_feature': True,
+        'texture_dissimilarity_feature': True,
+        'texture_correlation_feature': True,
+        'intensity_feature': True,
+        'gradient_intensity_feature': True,
+        't2_features': True,
+        'edge_feature': True
     }
+
+    binary_feature_extraction_params = {}
+
+    feature_extraction_params = {**fixed_feature_extraction_params, **binary_feature_extraction_params}
 
     keys = list(feature_extraction_params.keys())
     all_combinations = list(product([True, False], repeat=len(keys)))

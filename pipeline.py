@@ -58,17 +58,24 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
 
     print('-' * 5, 'Training...')
 
+    pre_process_params = {
+        'load_pre': False,
+        'skullstrip_pre': True,
+        'normalization_pre': True,
+        'registration_pre': True,
+        'save_pre': True
+    }
+
+    if pre_process_params['load_pre'] and sum(pre_process_params.values()) > 1:
+        print(f"If `load_pre` == True, all the rest of pre_process_params should be False!")
+        return
+
     # crawl the training image directories
     crawler = futil.FileSystemDataCrawler(data_train_dir,
                                           LOADING_KEYS,
                                           futil.BrainImageFilePathGenerator(),
-                                          futil.DataDirectoryFilter())
-
-    pre_process_params = {
-        'skullstrip_pre': True,
-        'normalization_pre': True,
-        'registration_pre': True
-    }
+                                          futil.DataDirectoryFilter(),
+                                          load_pre=pre_process_params['load_pre'])
 
     pre_process_and_feature_extraction_params = {**pre_process_params, **feature_extraction_params}
 
@@ -81,7 +88,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
 
     warnings.warn('Random forest parameters not properly set.')
     forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
-                                                n_estimators=1,
+                                                n_estimators=100,
                                                 max_depth=5)
 
     start_time = timeit.default_timer()
@@ -102,7 +109,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     crawler = futil.FileSystemDataCrawler(data_test_dir,
                                           LOADING_KEYS,
                                           futil.BrainImageFilePathGenerator(),
-                                          futil.DataDirectoryFilter())
+                                          futil.DataDirectoryFilter(),
+                                          load_pre=pre_process_params['load_pre'])
 
     # load images for testing and pre-process
     pre_process_and_feature_extraction_params['training'] = False
@@ -203,15 +211,14 @@ if __name__ == "__main__":
     )
 
     feature_extraction_params = {
-        't2_features': True,
-        'coordinates_feature': True,
+        'coordinates_feature': False,
         'intensity_feature': True,
-        'gradient_intensity_feature': True,
-        'neighborhood_features': True,
-        'texture_contrast_feature': True,
-        'texture_dissimilarity_feature': True,
-        'texture_correlation_feature': True,
-        'edge_feature': True
+        'gradient_intensity_feature': False,
+        't2_features': False,
+        'texture_contrast_feature': False,
+        'texture_dissimilarity_feature': False,
+        'texture_correlation_feature': False,
+        'edge_feature': False
     }
 
     args = parser.parse_args()
