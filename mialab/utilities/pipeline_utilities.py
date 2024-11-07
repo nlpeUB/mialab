@@ -297,16 +297,17 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
             pipeline_gt.set_param(fltr_prep.ImageRegistrationParameters(atlas_t1, img.transformation, True),
                                   len(pipeline_gt.filters) - 1)
 
-        if kwargs.get('registration_pre', False) and kwargs.get('save_pre', False):
-            for img_key, path in paths.items():
-                file_dir = os.path.dirname(path)
-                pre_file_name = f"pre_{os.path.basename(path)}"
-                pre_path = os.path.join(file_dir, pre_file_name)
-                sitk.WriteImage(img.images[img_key], pre_path)
-
         # execute pipeline on the ground truth image
         img.images[structure.BrainImageTypes.GroundTruth] = pipeline_gt.execute(
             img.images[structure.BrainImageTypes.GroundTruth])
+
+    if kwargs.get('registration_pre', False) and kwargs.get('save_pre', False):
+        for img_key, path in paths.items():
+            file_dir = os.path.dirname(path)
+            pre_file_name = f"pre_{os.path.basename(path)}"
+            pre_path = os.path.join(file_dir, pre_file_name)
+            sitk.WriteImage(img.images[img_key], pre_path)
+
     else:
         print(f"Preprocessed images loaded for {path}")
 
