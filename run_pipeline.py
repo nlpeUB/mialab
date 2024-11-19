@@ -10,6 +10,10 @@ def run_pipeline():
     data_test_dir = '../data/test/'
 
     fixed_feature_extraction_params = {
+        'load_features': False,
+        'save_features': True,
+        'overwrite': False,
+
         'intensity_feature': True,
     }
 
