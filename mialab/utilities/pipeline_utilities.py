@@ -65,6 +65,10 @@ class FeatureExtractor:
         """
         self.img = img
         self.training = kwargs.get('training', True)
+        self.load_features = kwargs.get('load_features', True)
+        self.save_features = kwargs.get('save_features', False)
+        self.overwrite = kwargs.get('overwrite', False)
+
         self.t2_features = kwargs.get('t2_features', False)
         self.coordinates_feature = kwargs.get('coordinates_feature', False)
         self.intensity_feature = kwargs.get('intensity_feature', False)
@@ -80,15 +84,91 @@ class FeatureExtractor:
         Returns:
             structure.BrainImage: The image with extracted features.
         """
+        if self.load_features:
+            self._load_features()
+        else:
+            self._compute_features()
+
+        # We can keep it here because it is not computed/loaded/saved.
+        if self.intensity_feature:
+            self.img.feature_images[FeatureImageTypes.T1w_INTENSITY] = self.img.images[structure.BrainImageTypes.T1w]
+            if self.t2_features:
+                self.img.feature_images[FeatureImageTypes.T2w_INTENSITY] = self.img.images[
+                    structure.BrainImageTypes.T2w]
+
+        if self.save_features:
+            if self.load_features and not self.overwrite:
+                print(f"If `load_features` == True and `overwrite` == False, save_features should be False!")
+            else:
+                self._save_features()
+
+        self._generate_feature_matrix()
+
+        return self.img
+
+    def _load_features(self):
+        if self.coordinates_feature:
+            self._load_feature(FeatureImageTypes.ATLAS_COORD)
+
+        if self.gradient_intensity_feature:
+            self._load_feature(FeatureImageTypes.T1w_GRADIENT_INTENSITY)
+            if self.t2_features:
+                self._load_feature(FeatureImageTypes.T2w_GRADIENT_INTENSITY)
+
+        if self.texture_contrast_feature:
+            self._load_feature(FeatureImageTypes.T1w_TEXTURE_CONTRAST)
+            if self.t2_features:
+                self._load_feature(FeatureImageTypes.T2w_TEXTURE_CONTRAST)
+
+        if self.texture_dissimilarity_feature:
+            self._load_feature(FeatureImageTypes.T1w_TEXTURE_DISSIMILARITY)
+            if self.t2_features:
+                self._load_feature(FeatureImageTypes.T2w_TEXTURE_DISSIMILARITY)
+
+        if self.texture_correlation_feature:
+            self._load_feature(FeatureImageTypes.T1w_TEXTURE_CORRELATION)
+            if self.t2_features:
+                self._load_feature(FeatureImageTypes.T2w_TEXTURE_CORRELATION)
+
+        if self.edge_feature:
+            self._load_feature(FeatureImageTypes.T1w_EDGES)
+            if self.t2_features:
+                self._load_feature(FeatureImageTypes.T2w_EDGES)
+
+    def _load_feature(self, feature_image_type: FeatureImageTypes):
+        feature_name = feature_image_type.name
+        feature_path = os.path.join(self.img.path, f"{feature_name}.nii.gz")
+
+        if not os.path.exists(feature_path):
+            print(f"For id {self.img.id_} feature {feature_name} is not computed!")
+            return
+
+        self.img.feature_images[feature_image_type] = sitk.ReadImage(feature_path)
+
+    def _save_features(self):
+        feature_names = []
+        for feature_image_type, feature_image in self.img.feature_images.items():
+            if feature_image_type in [FeatureImageTypes.T1w_INTENSITY, FeatureImageTypes.T2w_INTENSITY]:
+                continue
+
+            feature_name = feature_image_type.name
+            feature_names.append(feature_name)
+
+            feature_path = os.path.join(self.img.path, f"{feature_name}.nii.gz")
+
+            if os.path.exists(feature_path) and not self.overwrite:
+                print(f"For id {self.img.id_} feature {feature_name} has been already computed.")
+                continue
+
+            sitk.WriteImage(feature_image, feature_path)
+
+        print(f"For id {self.img.id_} features saved: ({feature_names})")
+
+    def _compute_features(self):
         if self.coordinates_feature:
             atlas_coordinates = fltr_feat.AtlasCoordinates()
             self.img.feature_images[FeatureImageTypes.ATLAS_COORD] = \
                 atlas_coordinates.execute(self.img.images[structure.BrainImageTypes.T1w])
-
-        if self.intensity_feature:
-            self.img.feature_images[FeatureImageTypes.T1w_INTENSITY] = self.img.images[structure.BrainImageTypes.T1w]
-            if self.t2_features:
-                self.img.feature_images[FeatureImageTypes.T2w_INTENSITY] = self.img.images[structure.BrainImageTypes.T2w]
 
         if self.gradient_intensity_feature:
             self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
@@ -123,17 +203,22 @@ class FeatureExtractor:
                 self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_CONTRAST] = texture_features_images_t1["contrast"]
 
                 if self.t2_features:
-                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_CONTRAST] = texture_features_images_t2["contrast"]
+                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_CONTRAST] = texture_features_images_t2[
+                        "contrast"]
 
             if self.texture_dissimilarity_feature:
-                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_DISSIMILARITY] = texture_features_images_t1["dissimilarity"]
+                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_DISSIMILARITY] = texture_features_images_t1[
+                    "dissimilarity"]
                 if self.t2_features:
-                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_DISSIMILARITY] = texture_features_images_t2["dissimilarity"]
+                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_DISSIMILARITY] = texture_features_images_t2[
+                        "dissimilarity"]
 
             if self.texture_correlation_feature:
-                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_CORRELATION] = texture_features_images_t1["correlation"]
+                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_CORRELATION] = texture_features_images_t1[
+                    "correlation"]
                 if self.t2_features:
-                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_CORRELATION] = texture_features_images_t2["correlation"]
+                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_CORRELATION] = texture_features_images_t2[
+                        "correlation"]
 
         if self.edge_feature:
             edge_features_extractor = fltr_feat.EdgesFeatureExtractor()
@@ -142,10 +227,6 @@ class FeatureExtractor:
             if self.t2_features:
                 self.img.feature_images[FeatureImageTypes.T2w_EDGES] = \
                     edge_features_extractor.execute(self.img.images[structure.BrainImageTypes.T2w])
-
-        self._generate_feature_matrix()
-
-        return self.img
 
     def _generate_feature_matrix(self):
         """Generates a feature matrix."""
@@ -309,7 +390,7 @@ def pre_process(id_: str, paths: dict, **kwargs) -> structure.BrainImage:
             sitk.WriteImage(img.images[img_key], pre_path)
 
     else:
-        print(f"Preprocessed images loaded for {path}")
+        print(f"Preprocessed images loaded from {path}")
 
     # update image properties to atlas image properties after registration
     img.image_properties = conversion.ImageProperties(img.images[structure.BrainImageTypes.T1w])

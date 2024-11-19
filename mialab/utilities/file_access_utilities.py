@@ -182,7 +182,8 @@ class FileSystemDataCrawler:
                  file_path_generator: FilePathGenerator,
                  dir_filter: DirectoryFilter = None,
                  file_extension: str = '.nii.gz',
-                 load_pre: bool = False):
+                 load_pre: bool = False,
+                 sanity_check_run: bool = False):
         """Initializes a new instance of the FileSystemDataCrawler class.
 
         Args:
@@ -194,6 +195,7 @@ class FileSystemDataCrawler:
             dir_filter (DirectoryFilter): A directory filter, which filters a list of directories.
             file_extension (str): The data file extension (with or without dot).
             load_pre (bool): Load preprocessed images.
+            sanity_check_run (bool): Load only one example
         """
         super().__init__()
 
@@ -203,6 +205,7 @@ class FileSystemDataCrawler:
         self.file_path_generator = file_path_generator
         self.file_extension = file_extension if file_extension.startswith('.') else '.' + file_extension
         self.load_pre = load_pre
+        self.sanity_check_run = sanity_check_run
 
         # dict with key=id (i.e, directory name), value=path to data directory
         self.data = {}  # dict with key=id (i.e, directory name), value=dict with key=file_keys and value=path to file
@@ -225,6 +228,9 @@ class FileSystemDataCrawler:
                 data_dict[item] = file_path
 
             self.data[id_] = data_dict
+
+            if self.sanity_check_run:
+                break
 
     def _crawl_directories(self) -> dict:
         """Crawls the directories, which contain data.

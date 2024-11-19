@@ -1,5 +1,6 @@
 from pipeline import main
 from itertools import product
+from tqdm import tqdm
 
 
 def run_pipeline():
@@ -9,25 +10,31 @@ def run_pipeline():
     data_test_dir = '../data/test/'
 
     fixed_feature_extraction_params = {
+        'intensity_feature': True,
+    }
+
+    binary_feature_extraction_params = {
         'coordinates_feature': True,
+        'gradient_intensity_feature': True,
         'texture_contrast_feature': True,
         'texture_dissimilarity_feature': True,
         'texture_correlation_feature': True,
-        'intensity_feature': True,
         'gradient_intensity_feature': True,
         't2_features': True,
         'edge_feature': True
     }
-
-    binary_feature_extraction_params = {}
 
     feature_extraction_params = {**fixed_feature_extraction_params, **binary_feature_extraction_params}
 
     keys = list(feature_extraction_params.keys())
     all_combinations = list(product([True, False], repeat=len(keys)))
 
-    for feature_extraction_params_ in all_combinations:
+    for feature_extraction_params_ in tqdm(all_combinations):
         current_params = dict(zip(keys, feature_extraction_params_))
         print(f"Running with parameters: {current_params}")
 
         main(result_dir, data_atlas_dir, data_train_dir, data_test_dir, feature_extraction_params)
+
+
+if __name__ == "__main__":
+    run_pipeline()

@@ -38,7 +38,7 @@ LOADING_KEYS = [structure.BrainImageTypes.T1w,
 
 
 def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_dir: str,
-         feature_extraction_params: Dict):
+         feature_extraction_params: Dict, sanity_check_run: bool = False):
     """Brain tissue segmentation using decision forests.
 
     The main routine executes the medical image analysis pipeline:
@@ -75,7 +75,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                                           LOADING_KEYS,
                                           futil.BrainImageFilePathGenerator(),
                                           futil.DataDirectoryFilter(),
-                                          load_pre=pre_process_params['load_pre'])
+                                          load_pre=pre_process_params['load_pre'],
+                                          sanity_check_run=sanity_check_run)
 
     pre_process_and_feature_extraction_params = {**pre_process_params, **feature_extraction_params}
 
@@ -110,7 +111,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
                                           LOADING_KEYS,
                                           futil.BrainImageFilePathGenerator(),
                                           futil.DataDirectoryFilter(),
-                                          load_pre=pre_process_params['load_pre'])
+                                          load_pre=pre_process_params['load_pre'],
+                                          sanity_check_run=sanity_check_run)
 
     # load images for testing and pre-process
     pre_process_and_feature_extraction_params['training'] = False
@@ -211,15 +213,24 @@ if __name__ == "__main__":
     )
 
     feature_extraction_params = {
-        'coordinates_feature': False,
+        'load_features': False,
+        'save_features': True,
+        'overwrite': False,
+
+        'coordinates_feature': True,
         'intensity_feature': True,
-        'gradient_intensity_feature': False,
-        't2_features': False,
-        'texture_contrast_feature': False,
-        'texture_dissimilarity_feature': False,
-        'texture_correlation_feature': False,
-        'edge_feature': False
+        'gradient_intensity_feature': True,
+        't2_features': True,
+        'texture_contrast_feature': True,
+        'texture_dissimilarity_feature': True,
+        'texture_correlation_feature': True,
+        'edge_feature': True
     }
 
     args = parser.parse_args()
-    main(args.result_dir, args.data_atlas_dir, args.data_train_dir, args.data_test_dir, feature_extraction_params)
+    main(args.result_dir,
+         args.data_atlas_dir,
+         args.data_train_dir,
+         args.data_test_dir,
+         feature_extraction_params,
+         sanity_check_run=True)
