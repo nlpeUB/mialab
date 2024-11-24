@@ -78,6 +78,8 @@ class FeatureExtractor:
         self.texture_correlation_feature = kwargs.get('texture_correlation_feature', False)
         self.edge_feature = kwargs.get('edge_feature', False)
 
+        self.feature_names = []
+
     def execute(self) -> structure.BrainImage:
         """Extracts features from an image.
 
@@ -91,10 +93,13 @@ class FeatureExtractor:
 
         # We can keep it here because it is not computed/loaded/saved.
         if self.intensity_feature:
-            self.img.feature_images[FeatureImageTypes.T1w_INTENSITY] = self.img.images[structure.BrainImageTypes.T1w]
+            feature_image_type = FeatureImageTypes.T1w_INTENSITY
+            self.feature_names.append(feature_image_type.name)
+            self.img.feature_images[feature_image_type] = self.img.images[structure.BrainImageTypes.T1w]
             if self.t2_features:
-                self.img.feature_images[FeatureImageTypes.T2w_INTENSITY] = self.img.images[
-                    structure.BrainImageTypes.T2w]
+                feature_image_type = FeatureImageTypes.T2w_INTENSITY
+                self.feature_names.append(feature_image_type.name)
+                self.img.feature_images[feature_image_type] = self.img.images[structure.BrainImageTypes.T2w]
 
         if self.save_features:
             if self.load_features and not self.overwrite:
@@ -103,6 +108,7 @@ class FeatureExtractor:
                 self._save_features()
 
         self._generate_feature_matrix()
+        self.img.feature_names = self.feature_names
 
         return self.img
 
@@ -137,6 +143,12 @@ class FeatureExtractor:
 
     def _load_feature(self, feature_image_type: FeatureImageTypes):
         feature_name = feature_image_type.name
+        
+        if feature_image_type == FeatureImageTypes.ATLAS_COORD:
+            self.feature_names += [f"ATLAS_COORD_{d}" for d in ["x", "y", "z"]]
+        else:
+            self.feature_names.append(feature_name)
+
         feature_path = os.path.join(self.img.path, f"{feature_name}.nii.gz")
 
         if not os.path.exists(feature_path):
@@ -166,15 +178,22 @@ class FeatureExtractor:
 
     def _compute_features(self):
         if self.coordinates_feature:
+            feature_image_type = FeatureImageTypes.ATLAS_COORD
+            self.feature_names += [f"ATLAS_COORD_{d}" for d in ["x", "y", "z"]]
+            
             atlas_coordinates = fltr_feat.AtlasCoordinates()
-            self.img.feature_images[FeatureImageTypes.ATLAS_COORD] = \
+            self.img.feature_images[feature_image_type] = \
                 atlas_coordinates.execute(self.img.images[structure.BrainImageTypes.T1w])
 
         if self.gradient_intensity_feature:
-            self.img.feature_images[FeatureImageTypes.T1w_GRADIENT_INTENSITY] = \
+            feature_image_type = FeatureImageTypes.T1w_GRADIENT_INTENSITY
+            self.feature_names.append(feature_image_type.name)
+            self.img.feature_images[feature_image_type] = \
                 sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T1w])
             if self.t2_features:
-                self.img.feature_images[FeatureImageTypes.T2w_GRADIENT_INTENSITY] = \
+                feature_image_type = FeatureImageTypes.T2w_GRADIENT_INTENSITY
+                self.feature_names.append(feature_image_type.name)
+                self.img.feature_images[feature_image_type] = \
                     sitk.GradientMagnitude(self.img.images[structure.BrainImageTypes.T2w])
 
         texture_features = []
@@ -200,32 +219,45 @@ class FeatureExtractor:
                 )
 
             if self.texture_contrast_feature:
-                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_CONTRAST] = texture_features_images_t1["contrast"]
+                feature_image_type = FeatureImageTypes.T1w_TEXTURE_CONTRAST
+                self.feature_names.append(feature_image_type.name)
+                self.img.feature_images[feature_image_type] = texture_features_images_t1["contrast"]
 
                 if self.t2_features:
-                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_CONTRAST] = texture_features_images_t2[
-                        "contrast"]
+                    feature_image_type = FeatureImageTypes.T2w_TEXTURE_CONTRAST
+                    self.feature_names.append(feature_image_type.name)
+                    self.img.feature_images[feature_image_type] = texture_features_images_t2["contrast"]
 
             if self.texture_dissimilarity_feature:
-                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_DISSIMILARITY] = texture_features_images_t1[
-                    "dissimilarity"]
+                feature_image_type = FeatureImageTypes.T1w_TEXTURE_DISSIMILARITY
+                self.feature_names.append(feature_image_type.name)
+                self.img.feature_images[feature_image_type] = texture_features_images_t1["dissimilarity"]
                 if self.t2_features:
-                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_DISSIMILARITY] = texture_features_images_t2[
-                        "dissimilarity"]
+                    feature_image_type = FeatureImageTypes.T2w_TEXTURE_DISSIMILARITY
+                    self.feature_names.append(feature_image_type.name)
+                    self.img.feature_images[feature_image_type] = texture_features_images_t2["dissimilarity"]
 
             if self.texture_correlation_feature:
-                self.img.feature_images[FeatureImageTypes.T1w_TEXTURE_CORRELATION] = texture_features_images_t1[
-                    "correlation"]
+                feature_image_type = FeatureImageTypes.T1w_TEXTURE_CORRELATION
+                self.feature_names.append(feature_image_type.name)
+                self.img.feature_images[feature_image_type] = texture_features_images_t1["correlation"]
                 if self.t2_features:
-                    self.img.feature_images[FeatureImageTypes.T2w_TEXTURE_CORRELATION] = texture_features_images_t2[
-                        "correlation"]
+                    feature_image_type = FeatureImageTypes.T2w_TEXTURE_CORRELATION
+                    self.feature_names.append(feature_image_type.name)
+                    self.img.feature_images[feature_image_type] = texture_features_images_t2["correlation"]
 
         if self.edge_feature:
+            feature_image_type = FeatureImageTypes.T1w_EDGES
+            self.feature_names.append(feature_image_type.name)
+
             edge_features_extractor = fltr_feat.EdgesFeatureExtractor()
-            self.img.feature_images[FeatureImageTypes.T1w_EDGES] = \
+            self.img.feature_images[feature_image_type] = \
                 edge_features_extractor.execute(self.img.images[structure.BrainImageTypes.T1w])
             if self.t2_features:
-                self.img.feature_images[FeatureImageTypes.T2w_EDGES] = \
+                feature_image_type = FeatureImageTypes.T2w_EDGES
+                self.feature_names.append(feature_image_type.name)
+
+                self.img.feature_images[feature_image_type] = \
                     edge_features_extractor.execute(self.img.images[structure.BrainImageTypes.T2w])
 
     def _generate_feature_matrix(self):

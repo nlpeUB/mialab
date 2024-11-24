@@ -1,10 +1,10 @@
 import wandb
 import pandas as pd
 
-from plot_results import plot_results
+from plot_results import plot_results, plot_feature_importances
 
 
-def log_metric_in_wab(model, result_summary_file, pre_process_params, subfolder_path):
+def log_metric_in_wnb(model, feature_names, result_summary_file, pre_process_params, subfolder_path):
     wandb.init(project="mialab", config=model.get_params())
 
     results_df = pd.read_csv(result_summary_file, sep=";")
@@ -22,5 +22,8 @@ def log_metric_in_wab(model, result_summary_file, pre_process_params, subfolder_
 
     results_fig = plot_results(subfolder_path, return_fig=True)
     wandb.log({"DICE score": wandb.Image(results_fig)})
+
+    features_importance_fig = plot_feature_importances(model, feature_names, return_fig=True)
+    wandb.log({"Features importance": wandb.Image(features_importance_fig)})
 
     wandb.finish()

@@ -17,7 +17,7 @@ import pymia.evaluation.writer as writer
 
 from typing import Dict
 
-from wnb_logging import log_metric_in_wab
+from wnb_logging import log_metric_in_wnb
 
 try:
     import mialab.data.structure as structure
@@ -59,11 +59,11 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     print('-' * 5, 'Training...')
 
     pre_process_params = {
-        'load_pre': False,
-        'skullstrip_pre': True,
-        'normalization_pre': True,
-        'registration_pre': True,
-        'save_pre': True
+        'load_pre': True,
+        'skullstrip_pre': False,
+        'normalization_pre': False,
+        'registration_pre': False,
+        'save_pre': False
     }
 
     if pre_process_params['load_pre'] and sum(pre_process_params.values()) > 1:
@@ -174,7 +174,8 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     # clear results such that the evaluator is ready for the next evaluation
     evaluator.clear()
 
-    log_metric_in_wab(forest, result_summary_file, pre_process_and_feature_extraction_params, result_dir)
+    feature_names = images[0].feature_names
+    log_metric_in_wnb(forest, feature_names, result_summary_file, pre_process_and_feature_extraction_params, result_dir)
 
 
 if __name__ == "__main__":

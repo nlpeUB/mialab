@@ -39,5 +39,7 @@ class BrainImage:
         self.image_properties = conversion.ImageProperties(self.images[list(self.images.keys())[0]])
         self.feature_images = {}
         self.feature_matrix = None  # a tuple (features, labels),
+        self.feature_names = []
+
         # where the shape of features is (n, number_of_features) and the shape of labels is (n, 1)
         # with n being the amount of voxels
