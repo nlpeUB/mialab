@@ -10,14 +10,13 @@ def run_pipeline():
     data_test_dir = '../data/test/'
 
     fixed_feature_extraction_params = {
-        'load_features': False,
-        'save_features': True,
+        'load_features': True,
+        'save_features': False,
         'overwrite': False,
-
-        'intensity_feature': True,
     }
 
     binary_feature_extraction_params = {
+        'intensity_feature': True,
         'coordinates_feature': True,
         'gradient_intensity_feature': True,
         'texture_contrast_feature': True,
@@ -34,6 +33,8 @@ def run_pipeline():
     all_combinations = list(product([True, False], repeat=len(keys)))
 
     for feature_extraction_params_ in tqdm(all_combinations):
+        if sum(feature_extraction_params_) == 0:
+            continue
         current_params = dict(zip(keys, feature_extraction_params_))
         print(f"Running with parameters: {current_params}")
 

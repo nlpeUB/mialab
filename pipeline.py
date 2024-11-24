@@ -213,8 +213,8 @@ if __name__ == "__main__":
     )
 
     feature_extraction_params = {
-        'load_features': False,
-        'save_features': True,
+        'load_features': True,
+        'save_features': False,
         'overwrite': False,
 
         'coordinates_feature': True,
