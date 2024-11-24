@@ -240,3 +240,4 @@ xcuserdata/
 .idea/
 wandb/
 mia-result/
+slurm_jobscript.sh
