@@ -312,7 +312,7 @@ class TextureFeatureExtractor(fltr.Filter):
             raise ValueError('image needs to be 3-D')
 
         img_arr = sitk.GetArrayFromImage(image)
-        glcm_features = self._compute_glcm_features_per_patch(img_arr, features)
+        glcm_features = self._compute_glcm_features_per_patch(img_arr, features, patch_size=(5, 5))
 
         img_outs = {}
         for feature in features:
