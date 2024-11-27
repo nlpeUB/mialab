@@ -1,6 +1,8 @@
-import matplotlib.pyplot as plt
-import pandas as pd
 import os
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier
 
 
 def plot_results(subfolder_path: str, return_fig: bool = False):
@@ -34,6 +36,28 @@ def plot_results(subfolder_path: str, return_fig: bool = False):
             return fig
         else:
             plt.show()
+
+
+def plot_feature_importances(forest: RandomForestClassifier, feature_names: list, return_fig: bool = True):
+    importances = forest.feature_importances_
+
+    importance_df = pd.DataFrame({
+        "Feature": feature_names,
+        "Importance": importances
+    }).sort_values(by="Importance", ascending=False)
+
+    fig = plt.figure(figsize=(10, 6))
+    plt.barh(importance_df["Feature"], importance_df["Importance"], color="skyblue")
+    plt.xlabel("Importance")
+    plt.ylabel("Feature")
+    plt.title("Feature Importances")
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+
+    if return_fig:
+        return fig
+    else:
+        plt.show()
 
 
 def main():
