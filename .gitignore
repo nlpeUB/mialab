@@ -238,6 +238,7 @@ xcuserdata/
 *.mha
 
 .idea/
+.virtual_documents/
 wandb/
 mia-result/
 slurm_jobscript.sh
