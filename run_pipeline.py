@@ -24,32 +24,33 @@ def run_pipeline():
         'edge_feature': True
     }
 
-    # keys = list(binary_feature_extraction_params.keys())
-    # all_combinations = list(product([True, False], repeat=len(keys)))
-    #
-    # for binary_feature_extraction_params_ in tqdm(all_combinations):
-    #     if sum(binary_feature_extraction_params_) == 0:
-    #         continue
-    #
-    #     current_params = dict(zip(keys, binary_feature_extraction_params_))
+    keys = list(binary_feature_extraction_params.keys())
+    all_combinations = list(product([True, False], repeat=len(keys)))
 
-    current_params = binary_feature_extraction_params
+    for binary_feature_extraction_params_ in tqdm(all_combinations):
+        if sum(binary_feature_extraction_params_) == 0:
+            continue
 
-    if current_params["texture"]:
-        current_params["texture_contrast_feature"] = True
-        current_params["texture_dissimilarity_feature"] = True
-        current_params["texture_correlation_feature"] = True
-    else:
-        current_params["texture_contrast_feature"] = False
-        current_params["texture_dissimilarity_feature"] = False
-        current_params["texture_correlation_feature"] = False
-    del current_params["texture"]
+        if sum(binary_feature_extraction_params_) == 1 & binary_feature_extraction_params_[-2]:
+            continue
 
-    feature_extraction_params = {**fixed_feature_extraction_params, **current_params}
+        current_params = dict(zip(keys, binary_feature_extraction_params_))
 
-    print(f"Running with parameters: {current_params}")
+        if current_params["texture"]:
+            current_params["texture_contrast_feature"] = True
+            current_params["texture_dissimilarity_feature"] = True
+            current_params["texture_correlation_feature"] = True
+        else:
+            current_params["texture_contrast_feature"] = False
+            current_params["texture_dissimilarity_feature"] = False
+            current_params["texture_correlation_feature"] = False
+        del current_params["texture"]
 
-    main(result_dir, data_atlas_dir, data_train_dir, data_test_dir, feature_extraction_params)
+        feature_extraction_params = {**fixed_feature_extraction_params, **current_params}
+
+        print(f"Running with parameters: {current_params}")
+
+        main(result_dir, data_atlas_dir, data_train_dir, data_test_dir, feature_extraction_params)
 
 
 if __name__ == "__main__":

@@ -241,3 +241,4 @@ xcuserdata/
 wandb/
 mia-result/
 slurm_jobscript.sh
+.virtual_documents
