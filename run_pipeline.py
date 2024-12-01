@@ -10,9 +10,9 @@ def run_pipeline():
     data_test_dir = '../data/test/'
 
     fixed_feature_extraction_params = {
-        'load_features': True,
-        'save_features': False,
-        'overwrite': False,
+        'load_features': False,
+        'save_features': True,
+        'overwrite': True,
     }
 
     binary_feature_extraction_params = {
@@ -29,6 +29,9 @@ def run_pipeline():
 
     for binary_feature_extraction_params_ in tqdm(all_combinations):
         if sum(binary_feature_extraction_params_) == 0:
+            continue
+
+        if sum(binary_feature_extraction_params_) == 1 & binary_feature_extraction_params_[-2]:
             continue
 
         current_params = dict(zip(keys, binary_feature_extraction_params_))
