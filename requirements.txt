@@ -11,3 +11,5 @@ mahotas
 scipy
 pandas
 pyradiomics
+plotly
+statsmodels
