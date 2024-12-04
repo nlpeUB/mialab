@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
+import plotly.express as px
 
 
 def plot_results(subfolder_path: str, return_fig: bool = False):
@@ -58,6 +59,27 @@ def plot_feature_importances(forest: RandomForestClassifier, feature_names: list
         return fig
     else:
         plt.show()
+
+def plot_dice_scores(runs_df: pd.DataFrame, n_estimators: int, texture_window: int, metric_columns: list):
+    runs_df = runs_df[(runs_df["n_estimators"] == n_estimators) & (runs_df["texture_window"] == texture_window)]
+    
+    mean_columns = [c for c in metric_columns if "MEAN_" in c]
+    
+    df_long = runs_df.melt(id_vars=['features_number'], value_vars=mean_columns, 
+                      var_name='Feature name', value_name='value')
+    
+    fig = px.scatter(
+        df_long, 
+        x='features_number', 
+        y='value', 
+        color='Feature name',
+        labels={'features_number': '#features', 'value': 'Value'},
+        title=f'Metrics values with respect to features number (n_estimators={n_estimators}, texture_window: {texture_window})',
+        trendline='ols',
+        
+    )
+    
+    fig.show()
 
 
 def main():
