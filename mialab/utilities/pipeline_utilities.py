@@ -143,7 +143,7 @@ class FeatureExtractor:
 
     def _load_feature(self, feature_image_type: FeatureImageTypes):
         feature_name = feature_image_type.name
-        
+
         if feature_image_type == FeatureImageTypes.ATLAS_COORD:
             self.feature_names += [f"ATLAS_COORD_{d}" for d in ["x", "y", "z"]]
         else:
@@ -180,7 +180,7 @@ class FeatureExtractor:
         if self.coordinates_feature:
             feature_image_type = FeatureImageTypes.ATLAS_COORD
             self.feature_names += [f"ATLAS_COORD_{d}" for d in ["x", "y", "z"]]
-            
+
             atlas_coordinates = fltr_feat.AtlasCoordinates()
             self.img.feature_images[feature_image_type] = \
                 atlas_coordinates.execute(self.img.images[structure.BrainImageTypes.T1w])
@@ -465,6 +465,52 @@ def post_process(img: structure.BrainImage, segmentation: sitk.Image, probabilit
     return pipeline.execute(segmentation)
 
 
+import numpy as np
+import scipy.ndimage as ndi
+
+'''
+class ContinuousDice:
+    """Computes the Continuous Dice Coefficient."""
+
+    def __init__(self):
+        self.metric = 'cDICE'  # Name of the metric
+        self.prediction = None
+        self.ground_truth = None
+
+    def set_data(self, prediction: np.ndarray, ground_truth: np.ndarray):
+        """Sets the prediction and ground truth data for the metric.
+
+        Args:
+            prediction (np.ndarray): Binary predicted segmentation.
+            ground_truth (np.ndarray): Binary ground truth segmentation.
+        """
+        self.prediction = prediction
+        self.ground_truth = ground_truth
+
+    def calculate(self) -> float:
+        """Calculates cDICE between prediction and ground truth.
+
+        Returns:
+            float: cDICE score.
+        """
+        if self.prediction is None or self.ground_truth is None:
+            raise ValueError("Prediction and ground truth must be set before calculation.")
+
+        # Compute signed distance maps
+        dist_pred = ndi.distance_transform_edt(~self.prediction) - ndi.distance_transform_edt(self.prediction)
+        dist_gt = ndi.distance_transform_edt(~self.ground_truth) - ndi.distance_transform_edt(self.ground_truth)
+
+        # Compute overlap weighted by the distance
+        overlap = self.prediction & self.ground_truth
+        overlap_sum = np.sum(overlap * np.minimum(dist_pred, dist_gt))
+
+        pred_sum = np.sum(self.prediction)
+        gt_sum = np.sum(self.ground_truth)
+
+        # Return cDICE score
+        return 2 * overlap_sum / (pred_sum + gt_sum + 1e-6)  # Avoid division by zero
+'''
+
 def init_evaluator() -> eval_.Evaluator:
     """Initializes an evaluator.
 
@@ -475,7 +521,19 @@ def init_evaluator() -> eval_.Evaluator:
     # initialize metrics
     metrics = [metric.DiceCoefficient()]
     # todo: add hausdorff distance, 95th percentile (see metric.HausdorffDistance)
-    warnings.warn('Initialized evaluation with the Dice coefficient. Do you know other suitable metrics?')
+    try:
+        hausdorff_metric = metric.HausdorffDistance(percentile=95)
+        # print(hausdorff_metric.__dict__)  # Debugging step
+        metrics.append(hausdorff_metric)
+    except AttributeError:
+        warnings.warn('Initialized evaluation with the Dice coefficient. Hausdorff Distance is not available.')
+
+    # warnings.warn('Initialized evaluation with the Dice coefficient. Do you know other suitable metrics?')
+    '''
+    # cDICE
+    c_dice = ContinuousDice()
+    metrics.append(c_dice)
+    '''
 
     # define the labels to evaluate
     labels = {1: 'WhiteMatter',
@@ -487,7 +545,6 @@ def init_evaluator() -> eval_.Evaluator:
 
     evaluator = eval_.SegmentationEvaluator(metrics, labels)
     return evaluator
-
 
 def pre_process_batch(data_batch: t.Dict[structure.BrainImageTypes, structure.BrainImage],
                       pre_process_params: dict = None, multi_process: bool = True) -> t.List[structure.BrainImage]:
