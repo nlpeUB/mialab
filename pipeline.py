@@ -18,6 +18,7 @@ import pymia.evaluation.writer as writer
 from typing import Dict
 
 from wnb_logging import log_metric_in_wnb
+import joblib # Storing training model
 
 try:
     import mialab.data.structure as structure
@@ -59,11 +60,11 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     print('-' * 5, 'Training...')
 
     pre_process_params = {
-        'load_pre': True,
+        'load_pre': True, # First run False, subsequent True
         'skullstrip_pre': False,
         'normalization_pre': False,
         'registration_pre': False,
-        'save_pre': False
+        'save_pre': False # First run True for re-use
     }
 
     if pre_process_params['load_pre'] and sum(pre_process_params.values()) > 1:
@@ -87,14 +88,30 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     data_train = np.concatenate([img.feature_matrix[0] for img in images])
     labels_train = np.concatenate([img.feature_matrix[1] for img in images]).squeeze()
 
-    warnings.warn('Random forest parameters not properly set.')
-    forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
-                                                n_estimators=10,
-                                                max_depth=5)
+    # If saved model exists
+    model_path = os.path.join(result_dir, 'forest_model.joblib')
+    try:
+        if os.path.exists(model_path):
+            print(f"Loading saved model from {model_path}")
+            forest = joblib.load(model_path)
+        else:
+            raise FileNotFoundError("Model not found. Proceeding with training.")
+    except Exception as e:
+        print(f"Error during model loading: {e}")
+        warnings.warn('Random forest parameters not properly set.')
+        forest = sk_ensemble.RandomForestClassifier(max_features=images[0].feature_matrix[0].shape[1],
+                                                    n_estimators=100,
+                                                    max_depth=5)
 
-    start_time = timeit.default_timer()
-    forest.fit(data_train, labels_train)
-    print(' Time elapsed:', timeit.default_timer() - start_time, 's')
+        print("Training new model...")
+        start_time = timeit.default_timer()
+        forest.fit(data_train, labels_train)
+        print('Training completed. Time elapsed:', timeit.default_timer() - start_time, 's')
+
+        # Save the trained model
+        os.makedirs(result_dir, exist_ok=True)  # Ensure result directory exists
+        joblib.dump(forest, model_path)
+        print(f"Model saved to {model_path}")
 
     # create a result directory with timestamp
     t = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
@@ -168,6 +185,7 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     result_summary_file = os.path.join(result_dir, 'results_summary.csv')
     functions = {'MEAN': np.mean, 'STD': np.std}
     writer.CSVStatisticsWriter(result_summary_file, functions=functions).write(evaluator.results)
+
     print('\nAggregated statistic results...')
     writer.ConsoleStatisticsWriter(functions=functions).write(evaluator.results)
 
