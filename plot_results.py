@@ -63,7 +63,7 @@ def plot_feature_importances(forest: RandomForestClassifier, feature_names: list
 def plot_dice_scores(runs_df: pd.DataFrame, n_estimators: int, texture_window: int, metric_columns: list):
     runs_df = runs_df[(runs_df["n_estimators"] == n_estimators) & (runs_df["texture_window"] == texture_window)]
     
-    mean_columns = [c for c in metric_columns if "MEAN_" in c]
+    mean_columns = [c for c in metric_columns if "MEAN_" in c and c in runs_df.columns]
     
     df_long = runs_df.melt(id_vars=['features_number'], value_vars=mean_columns, 
                       var_name='Feature name', value_name='value')
