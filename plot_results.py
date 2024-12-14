@@ -60,25 +60,52 @@ def plot_feature_importances(forest: RandomForestClassifier, feature_names: list
     else:
         plt.show()
 
-def plot_dice_scores(runs_df: pd.DataFrame, n_estimators: int, texture_window: int, metric_columns: list):
+
+def plot_scores(runs_df: pd.DataFrame, n_estimators: int, texture_window: int, metric_columns: list):
     runs_df = runs_df[(runs_df["n_estimators"] == n_estimators) & (runs_df["texture_window"] == texture_window)]
-    
-    mean_columns = [c for c in metric_columns if "MEAN_" in c]
-    
-    df_long = runs_df.melt(id_vars=['features_number'], value_vars=mean_columns, 
-                      var_name='Feature name', value_name='value')
-    
+
+    mean_columns = [c for c in metric_columns if "MEAN_" in c and c in runs_df.columns]
+
+    df_long = runs_df.melt(
+        id_vars=['features_number', 'intensity_feature'],
+        value_vars=mean_columns,
+        var_name='Feature name',
+        value_name='value'
+    )
+
     fig = px.scatter(
-        df_long, 
-        x='features_number', 
-        y='value', 
+        df_long,
+        x='features_number',
+        y='value',
         color='Feature name',
         labels={'features_number': '#features', 'value': 'Value'},
         title=f'Metrics values with respect to features number (n_estimators={n_estimators}, texture_window: {texture_window})',
         trendline='ols',
-        
     )
-    
+
+    traces_to_update = fig.data
+    for trace in traces_to_update:
+        highlighted = df_long[(df_long['Feature name'] == trace.name) & (df_long['intensity_feature'] == 1)]
+
+        if not highlighted.empty:
+            fig.add_scatter(
+                x=highlighted['features_number'],
+                y=highlighted['value'],
+                mode='markers',
+                marker=dict(size=12, symbol='circle-open', color="gray"),
+                name=trace.name,
+                legendgroup=trace.name,
+                showlegend=False
+            )
+
+    fig.add_scatter(
+        x=[None],
+        y=[None],
+        mode='markers',
+        marker=dict(size=12, symbol='circle-open', color="gray"),
+        name='intensity_feature'
+    )
+
     fig.show()
 
 
