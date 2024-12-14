@@ -98,6 +98,14 @@ def plot_scores(runs_df: pd.DataFrame, n_estimators: int, texture_window: int, m
                 showlegend=False
             )
 
+    fig.add_scatter(
+        x=[None],
+        y=[None],
+        mode='markers',
+        marker=dict(size=12, symbol='circle-open', color="gray"),
+        name='intensity_feature'
+    )
+
     fig.show()
 
 
