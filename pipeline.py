@@ -59,11 +59,11 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     print('-' * 5, 'Training...')
 
     pre_process_params = {
-        'load_pre': True,
-        'skullstrip_pre': False,
-        'normalization_pre': False,
-        'registration_pre': False,
-        'save_pre': False
+        'load_pre': False,
+        'skullstrip_pre': True,
+        'normalization_pre': True,
+        'registration_pre': True,
+        'save_pre': True
     }
 
     if pre_process_params['load_pre'] and sum(pre_process_params.values()) > 1:
@@ -175,7 +175,10 @@ def main(result_dir: str, data_atlas_dir: str, data_train_dir: str, data_test_di
     evaluator.clear()
 
     feature_names = images[0].feature_names
-    log_metric_in_wnb(forest, feature_names, result_summary_file, pre_process_and_feature_extraction_params, result_dir)
+
+    if not sanity_check_run:
+        log_metric_in_wnb(forest, feature_names, result_summary_file, pre_process_and_feature_extraction_params,
+                          result_dir)
 
 
 if __name__ == "__main__":
@@ -214,9 +217,9 @@ if __name__ == "__main__":
     )
 
     feature_extraction_params = {
-        'load_features': True,
-        'save_features': False,
-        'overwrite': False,
+        'load_features': False,
+        'save_features': True,
+        'overwrite': True,
 
         'coordinates_feature': True,
         'intensity_feature': True,
